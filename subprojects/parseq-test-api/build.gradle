@@ -1,0 +1,12 @@
+ext {
+  description = '''Provides test fixtures for writing ParSeq-based integration/unit tests'''
+}
+
+dependencies {
+  compile group: "org.testng", name: "testng", version: "6.9.9"
+  compile group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.5.1"
+}
+
+javadoc {
+  options.use = false
+}

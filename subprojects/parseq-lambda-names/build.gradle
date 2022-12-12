@@ -1,0 +1,36 @@
+ext {
+  description = """Finds source code locations and infers operations for lambda expressions"""
+}
+
+apply plugin: 'com.github.johnrengelman.shadow'
+
+
+configurations {
+  testRuntime.extendsFrom shadow
+}
+
+dependencies {
+  shadow group: 'net.bytebuddy', name: 'byte-buddy-agent', version: '1.10.21'
+  shadow group: 'net.bytebuddy', name: 'byte-buddy-dep', version: '1.10.21'
+  shadow group: 'org.ow2.asm', name: 'asm-tree', version: '9.0'
+  shadow group: 'org.ow2.asm', name: 'asm', version: '9.0'
+  shadow group: 'org.ow2.asm', name: 'asm-analysis', version: '9.0'
+  testCompile group: 'org.testng', name: 'testng', version: '7.3.0'
+}
+
+sourceSets.main.compileClasspath += configurations.shadow + sourceSets.main.compileClasspath
+
+javadoc.classpath += configurations.shadow + sourceSets.main.compileClasspath
+
+shadowJar {
+  configurations += [project.configurations.shadow]
+  classifier = null
+  relocate 'org.objectweb', 'parseq.org.objectweb'
+  relocate 'net.bytebuddy', 'parseq.net.bytebuddy'
+}
+
+jar {
+  finalizedBy shadowJar // The shadowJar task basically overwrites the output of the jar task (kind of hacky)
+}
+
+compileJava.options.compilerArgs += '-Xlint:-unchecked'

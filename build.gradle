@@ -1,0 +1,156 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+  dependencies {
+    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.21.0'
+    classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'
+  }
+}
+
+apply from: file("gradle/versioning.gradle")
+
+allprojects { // for all projects including the root project
+  apply plugin: 'idea'
+  apply plugin: 'eclipse'
+  apply plugin: 'maven-publish'
+  apply plugin: 'maven'
+  // TODO: remove this once we no longer need ivy publications (adds the "signatures" .ivy configuration)
+  apply plugin: 'signing'
+
+  version = rootProject.version
+
+  repositories {
+    mavenCentral()
+    mavenLocal()
+  }
+}
+
+idea {
+  project {
+    jdkName = '1.8.0_121'
+    languageLevel = '1.8'
+  }
+}
+
+subprojects {
+  if (!it.name.equals("parseq-tracevis")) {
+    apply plugin: 'java'
+    apply plugin: 'java-library'
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    test {
+      useTestNG()
+    }
+
+    if (it.name.startsWith('parseq-') && !it.name.equals("parseq-lambda-names")) { // all contrib modules
+      dependencies {
+        compile project(":parseq")
+      }
+    }
+
+    // package jar
+    task packageJavadoc(type: Jar, dependsOn: 'javadoc') {
+      from javadoc.destinationDir
+      classifier = 'javadoc'
+    }
+
+    task packageSources(type: Jar, dependsOn: 'classes') {
+      from sourceSets.main.allSource
+      classifier = 'sources'
+    }
+
+    // configure MANIFEST
+    // TODO: unnecessary and volatile attributes affect caching and should be removed
+    jar {
+      manifest {
+        attributes("Created-By": "Gradle",
+            "Version": version,
+            "Build-JDK": JavaVersion.current())
+      }
+    }
+
+
+    javadoc {
+      options.source = "8"
+      options.use = true
+      options.author = true
+      // TODO: update date to be dynamically set
+      options.bottom = "Copyright &#169; 2018. All rights reserved."
+      options.classpath += file("${project.projectDir.absolutePath}/src/main/java")
+      options.links("https://docs.oracle.com/javase/8/docs/api/")
+      options.addStringOption("charset", "UTF-8")
+    }
+
+    if (JavaVersion.current().isJava8Compatible()) {
+      allprojects {
+        tasks.withType(Javadoc) {
+          options.addStringOption('Xdoclint:none', '-quiet')
+        }
+      }
+    }
+  }
+
+  // Don't include parseq-examples and parseq-legacy-examples, since we don't need to publish their jar files
+  afterEvaluate {
+    if (it.name.startsWith('parseq') && !it.name.endsWith('examples') && !it.name.endsWith('tracevis')) {
+      artifacts {
+        archives jar
+        archives packageJavadoc
+        archives packageSources
+      }
+    }
+  }
+}
+
+task runTracevisServer (dependsOn:':parseq-tracevis-server:build') {
+  description 'Start trace visualization server for observing the execution of tasks.'
+
+  doLast {
+    // get dot path in local machine, before running this task, please install graphviz in your machine
+    try {
+      new ByteArrayOutputStream().withStream { os ->
+        def result = exec {
+          executable = 'which'
+          args = ["dot"]
+          standardOutput = os
+        }
+        ext.dotLocation = os.toString().trim()
+      }
+    } catch (Exception e) {
+      throw new Exception("Can not find dot tools, please install it or check the docLocation!")
+    }
+
+    def tracevisJar = "${projectDir}/subprojects/parseq-tracevis-server/build/libs/parseq-tracevis-server-" + version + '-jar-with-dependencies.jar'
+
+    File docFile = new File(dotLocation)
+    if (docFile.exists()) {
+      javaexec {
+        main="-jar"
+        args = [
+            tracevisJar,
+            dotLocation
+        ]
+      }
+    } else {
+      logger.error('Can not find dot tools, please install it or check the docLocation!')
+    }
+  }
+}
+
+subprojects { p ->
+  if (!p.name.endsWith('examples')) {
+    p.afterEvaluate {
+      p.apply from: "$rootDir/gradle/publications.gradle"
+    }
+    p.apply from: "$rootDir/gradle/jfrog.gradle"
+  }
+}
+
+// TODO: remove once ivy publications are no longer required
+// Clean the project's local ivy repo before publishing to prevent conflicts
+project.tasks.uploadArchives.doFirst {
+  logger.lifecycle "Cleaning local ivy repo: $rootDir/build/ivy-repo"
+  delete(file("$rootDir/build/ivy-repo"))
+}

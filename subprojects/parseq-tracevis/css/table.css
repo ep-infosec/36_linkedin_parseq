@@ -1,0 +1,76 @@
+.tableview th:first-child {
+  border-radius: 5px 0 0 0;
+}
+
+.tableview th:last-child {
+  border-radius: 0 5px 0 0;
+}
+
+.tableview .hidden {
+  display: none;
+}
+
+.tableview tr {
+  background-color: #FFF;
+}
+
+.tableview tr.oddrow {
+  background-color: #F8F8F8;
+}
+
+.tableview td {
+  word-wrap: break-word;
+}
+
+/* Prevent long task names from dominating the table */
+.tableview td:first-child {
+  width: 50%;
+
+  /*
+   * The following value appears to be ignored by all tested browsers (Chrome,
+   * Firefox, Safari), but without it, long task names dominate the entire
+   * table.
+   */
+  max-width: 20em;
+}
+
+.tableview td .expandable {
+  cursor: pointer;
+}
+
+.tableview td:last-child {
+  width: 50%;
+}
+
+.tableview td span.composite {
+  font-weight: bold;
+}
+
+.tableview td.numeric {
+  font-family: monospace;
+  text-align: right;
+}
+
+.tableview td.value textarea {
+  min-width: 100%;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  resize: vertical;
+}
+
+.tableview .success {
+  color: green;
+}
+
+.tableview .error {
+  color: red;
+}
+
+.tableview .early_finish {
+  color: goldenrod;
+}
+
+.tableview .unfinished {
+  color: gray;
+}

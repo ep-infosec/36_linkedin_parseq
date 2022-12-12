@@ -1,0 +1,51 @@
+.waterfallview .trace rect { stroke: #999; }
+
+.waterfallview .trace rect { fill: #ACACAC; }
+.waterfallview .trace rect.success { fill: #60D060; }
+.waterfallview .trace rect.error { fill: #FF6F6F; }
+.waterfallview .trace rect.early_finish { fill: #FFFD76; }
+
+.waterfallview .trace circle {
+  fill: #FFFFFF;
+  stroke: #333;
+  stroke-width: 1px;
+}
+
+.waterfallview .trace line {
+  stroke: #333;
+  stroke-width: 1px;
+  stroke-linecap: round;
+  stroke-dasharray: 3;
+}
+
+.waterfallview .trace text,
+.waterfallview .trace text tspan {
+  fill: #333;
+  font-family: arial;
+}
+
+.waterfallview .trace.composite {
+  cursor: pointer;
+}
+
+.waterfallview .x-axis path,
+.waterfallview .x-axis line {
+  pointer-events: none;
+  fill: none;
+  stroke: black;
+  shape-rendering: crispEdges;
+  stroke-opacity: .1;
+}
+
+.waterfallview .x-axis .minor-grid line {
+  stroke-opacity: .05;
+}
+
+.waterfallview {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

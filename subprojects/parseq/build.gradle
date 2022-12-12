@@ -1,0 +1,58 @@
+ext {
+  description = '''ParSeq project core code'''
+}
+
+
+//TODO avoid buildscript dependency
+buildscript {
+  repositories {
+    maven {
+      url "https://repo1.maven.org/maven2/"
+    }
+  }
+
+  dependencies {
+    classpath group: 'net.sourceforge.fmpp', name: 'fmpp', version: '0.9.14'
+  }
+
+  ant.taskdef(name: 'fmpp', classname:'fmpp.tools.AntTask', classpath: buildscript.configurations.classpath.asPath)
+}
+
+
+configurations {
+  bootstrap {
+    description "bootstrapping dependencies"
+    visible = false
+  }
+  // Maintains transitive consumer compatibility for consumers of parseq 3. TODO: remove in parseq 5
+  testArtifact {
+    description "this is deprecated and will be removed, please depend on parseq-test-api instead"
+  }
+}
+
+dependencies {
+  compile group: "com.google.guava", name:"guava", version: "30.1.1-jre"
+  compile group: 'org.codehaus.jackson', name: 'jackson-core-asl', version: '1.8.8'
+  compile group: 'org.codehaus.jackson', name: 'jackson-mapper-asl', version: '1.8.8'
+  compile group: "org.slf4j", name: "slf4j-api", version: "1.7.25"
+  bootstrap group: "net.sourceforge.fmpp", name: "fmpp", version: "0.9.15"
+
+  testCompile project(':parseq-test-api')
+  testCompile group: "org.testng", name: "testng", version: "6.9.9"
+  testCompile group: "org.slf4j", name: "slf4j-log4j12", version: "1.7.25"
+
+  // TODO: remove in parseq 5
+  testArtifact project(':parseq-test-api')
+}
+
+// When update the template and data in codegen, need to run this task before gradle build task
+task generateFmppSources {
+  description 'Configure Freemarker to generate TupleNtask, ParNTask code in source folder.'
+  doLast {
+    println "Generating sources...."
+    ant.fmpp configuration: "$projectDir/src/main/codegen/config.fmpp",
+        sourceRoot: "$projectDir/src/main/codegen/templates",
+        outputRoot: "$projectDir/src/main/java"
+  }
+}
+

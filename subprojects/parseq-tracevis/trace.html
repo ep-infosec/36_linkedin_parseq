@@ -1,0 +1,188 @@
+<!--
+* Copyright 2012 LinkedIn, Inc
+*
+* Licensed under the Apache License, Version 2.0 (the "License"); you may not
+* use this file except in compliance with the License. You may obtain a copy of
+* the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+* WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+* License for the specific language governing permissions and limitations under
+* the License.
+-->
+
+<!doctype html>
+
+<meta charset="utf-8"/>
+<title>ParSeq JSON Trace Viewer</title>
+
+<link rel="shortcut icon" href="img/icon.png">
+<link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+<link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/waterfall.css">
+<link rel="stylesheet" href="css/d3.slider.css">
+
+<style>
+.btnCenter {
+  margin: 0 50%;
+}
+
+textarea {
+  width: 760px;
+}
+
+textarea.error {
+  color: red;
+}
+
+</style>
+
+<div class="container-fluid" id="app-container">
+  <div class="row-fluid">
+    <div class="page-header label label-info">
+      <h4 style="text-align: center;">ParSeq JSON Trace Viewer vX.X.X</h4>
+    </div>
+  </div>
+
+  <div class="row-fluid">
+    <form action="javascript:void(0);">
+      <fieldset>
+        <div class="span2">
+          <ul class="nav nav-list">
+            <li class="nav-header">Views</li>
+            <li id="viewWaterfall"><a onclick="setView('waterfall'); refreshView();">Waterfall</a></li>
+            <li id="viewGraphviz"><a onclick="setView('graphviz'); refreshView();">Graphviz</a></li>
+            <li id="viewTable"><a onclick="setView('table'); refreshView();">Table</a></li>
+          </ul>
+        </div>
+        <div class="span10">
+          <textarea id="jsonText" rows=3 placeholder="Insert JSON trace here" spellcheck="false"></textarea>
+        </div>
+        <div class="span10">
+          <label class="checkbox inline">
+            <input id="checkboxExcludeUser" type="checkbox" onclick="refreshView();"><em>User</em> hidden tasks
+          </label>
+          <label class="checkbox inline">
+            <input id="checkboxExcludeSystem" type="checkbox" onclick="refreshView();"><em>System</em> hidden tasks
+          </label>
+          <label class="checkbox inline">
+            <input id="checkboxExcludeParent" type="checkbox" checked="checked" onclick="refreshView();">Parent tasks
+          </label>
+          <label class="checkbox inline">
+            <input id="checkboxExcludeNonCritical" type="checkbox" onclick="refreshView();">Critical path
+          </label>
+        </div>
+      </fieldset>
+    </form>
+    <hr/>
+  </div>
+
+</div>
+
+
+<div id="resultView" class="row-fluid"/>
+
+<script src="node_modules/d3/d3.js"></script>
+<script src="build/parseq-tracevis.js"></script>
+<script src="node_modules/svg-injector/svg-injector.js"></script>
+<script src="node_modules/svg-pan-zoom/dist/svg-pan-zoom.js"></script>
+<script src="js/d3.slider.js"></script>
+
+<script>
+  var
+    WATERFALL = parseqTracevis.renderWaterfall,
+    GRAPHVIZ = parseqTracevis.renderGraphviz,
+    TABLE = parseqTracevis.renderTable;
+
+var inputJSON = d3.select("#jsonText");
+
+var currentView;
+setView("waterfall");
+
+/* If the URL contains a trace, inject it into the input textarea */
+var traceRE = /(?:\?|&)trace=([^\&]+)/;
+var searchStr = window.location.search;
+var match = traceRE.exec(searchStr);
+if (match) {
+  renderTrace(decodeURIComponent(match[1]));
+}
+
+function setView(view) {
+  var prevView = selectView(currentView);
+  if (prevView) {
+    prevView.classed("active", false);
+  }
+  currentView = view;
+  selectView(view).classed("active", true);
+}
+
+function selectView(view) {
+  switch (view) {
+    case "waterfall": return d3.select("#viewWaterfall");
+    case "graphviz": return d3.select("#viewGraphviz");
+    case "table": return d3.select("#viewTable");
+  }
+}
+
+function refreshView() {
+  var view;
+  switch (currentView) {
+    case "waterfall": view = WATERFALL; break;
+    case "graphviz": view = GRAPHVIZ; break;
+    case "table": view = TABLE; break;
+  }
+
+  d3.selectAll("#resultView *").remove();
+  var jsonText = inputJSON.property("value");
+
+  if (!jsonText.length) {
+    return;
+  }
+
+  var json;
+  try {
+    json = JSON.parse(jsonText);
+    inputJSON.classed("error", false);
+    inputJSON.attr("title", null);
+  } catch (err) {
+    inputJSON.classed("error", true);
+    inputJSON.attr("title", "Parsing trace failed: " + err);
+    throw err;
+  }
+
+  var g = parseqTracevis.trace.parse(json);
+  if (!d3.select("#checkboxExcludeUser").property("checked")) {
+    parseqTracevis.trace.excludeUserTasks(g);
+  }
+  if (!d3.select("#checkboxExcludeSystem").property("checked")) {
+    parseqTracevis.trace.excludeSystemTasks(g);
+  }
+  if (!d3.select("#checkboxExcludeParent").property("checked")) {
+    parseqTracevis.trace.excludeParentTasks(g);
+  }
+  if (d3.select("#checkboxExcludeNonCritical").property("checked")) {
+    parseqTracevis.trace.excludeNonCriticalTasks(parseqTracevis.trace, g);
+  }
+  view(d3.select("#resultView").attr('class', 'row-fluid'), g);
+}
+
+inputJSON.node().addEventListener('input', refreshView, false);
+
+/**
+ * This is a utility that abstracts the details of how to programmatically load
+ * a trace and render it. If a view is not supplied then the current view is
+ * used. The default view is "waterfall".
+ *
+ * This function should be preferred to direct use of DOM ids / functions as
+ * they may change in the future.
+ */
+function renderTrace(trace, view) {
+  inputJSON.property("value", trace);
+  if (arguments.length > 1) setView(view);
+  refreshView();
+}
+</script>

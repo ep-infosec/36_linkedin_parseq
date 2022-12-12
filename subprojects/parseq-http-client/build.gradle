@@ -1,0 +1,7 @@
+ext {
+    description = """Integrates ParSeq with the Async Http Client library"""
+}
+
+dependencies {
+    compile group: 'com.ning', name: 'async-http-client', version:'1.9.21'
+}
